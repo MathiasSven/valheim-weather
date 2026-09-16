@@ -1,54 +1,67 @@
 <!DOCTYPE html>
-<HTML>
-	<HEAD>
-	    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
-	    <script src="./script.js"></script>
-	    <link rel="stylesheet" href="./style.css">
-	</HEAD>
-	<BODY><center>
-		<h1>Weather tool</h1>
-	    <div>Morning starts at 03:36.</div>
-	    <div>Night starts at 20:24.</div><br/>
-	    <label for="day">Day: </label>
-		<input id="day" type="number" value="1"/>
-		<button id="run">Forecast</button>
-		<br/><br/>
-		<table>
-		    <thead>
-		        <tr id="weather_time"><td>Biome</td></tr>
-		    </thead>
-		    <!--<tr id="weather_debug"><td>Debug</td></tr>-->
-		    <tr id="weather_meadows"><td>Meadows</td></tr>
-		    <tr id="weather_blackforest"><td>Black forest</td></tr>
-		    <tr id="weather_swamp"><td>Swamp</td></tr>
-		    <tr id="weather_mountain"><td>Mountain</td></tr>
-		    <tr id="weather_plains"><td>Plains</td></tr>
-		    <tr id="weather_ocean"><td>Ocean</td></tr>
-		    <tr id="weather_mistlands"><td>Mistlands</td></tr>
-		    <tr id="weather_ashlands"><td>Ashlands</td></tr>
-		    <tr id="weather_deepnorth"><td>Deep north</td></tr>
-		</table>
-		<br/><br/>
-		<table>
-		    <thead>
-		        <tr id="wind_time"><td></td></tr>
-		    </thead>
-		    <tr id="wind_from"><td colspan=2>From</td></tr>
-		    <tr id="wind_degrees_from"><td colspan=2>Degrees</td></tr>
-		    <tr id="wind_to"><td colspan=2>To</td></tr>
-		    <tr id="wind_degrees_to"><td colspan=2>Degrees</td></tr>
-		    <tr id="wind_intensity"><td colspan=2>Intensity</td></tr>
-		    <tr id="wind_meadows"><td colspan=2>Meadows</td></tr>
-		    <tr id="wind_blackforest"><td colspan=2>Black forest</td></tr>
-		    <tr id="wind_swamp"><td colspan=2>Swamp</td></tr>
-		    <tr id="wind_mountain"><td colspan=2>Mountain</td></tr>
-		    <tr id="wind_plains"><td colspan=2>Plains</td></tr>
-		    <tr id="wind_ocean"><td colspan=2>Ocean</td></tr>
-		    <tr id="wind_mistlands"><td colspan=2>Mistlands</td></tr>
-		    <tr id="wind_ashlands"><td colspan=2>Ashlands</td></tr>
-		    <tr id="wind_deepnorth"><td colspan=2>Deep north</td></tr>
-		</table>
-		<br/><br/>
-		<br/><br/>
-	</center></BODY>
-</HTML>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Valheim Weather Forecast</title>
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Averia+Serif+Libre:wght@400;700&display=swap" rel="stylesheet">
+	<link rel="stylesheet" href="./style.css">
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+	<script src="./script.js"></script>
+</head>
+<body>
+	<div class="page">
+		<header class="topbar">
+			<div class="brand">
+				<h1>Valheim Weather</h1>
+				<div class="subtitle">Forecast of weather and wind for every biome</div>
+			</div>
+
+			<div class="day-picker">
+				<button id="prev" class="nav" type="button" aria-label="Previous day">&#8249;</button>
+				<label for="day">Day</label>
+				<input id="day" type="number" min="1" value="1"/>
+				<button id="next" class="nav" type="button" aria-label="Next day">&#8250;</button>
+				<button id="run" type="button">Forecast</button>
+			</div>
+
+			<div class="daycycle" aria-label="Day cycle">
+				<div class="cycle-bar"></div>
+				<div class="cycle-marks">
+					<div class="mark" style="--at:0%"><img class="ico night" src="icons/day/midnight.svg" alt="midnight"><span>00:00</span></div>
+					<div class="mark" style="--at:15%"><img class="ico dawn" src="icons/day/sunrise.svg" alt="sunrise"><span>03:36</span></div>
+					<div class="mark" style="--at:50%"><img class="ico day" src="icons/day/noon.svg" alt="noon"><span>12:00</span></div>
+					<div class="mark" style="--at:85%"><img class="ico dusk" src="icons/day/sunset.svg" alt="sunset"><span>20:24</span></div>
+					<div class="mark" style="--at:100%"><img class="ico night" src="icons/day/midnight.svg" alt="midnight"><span>24:00</span></div>
+				</div>
+			</div>
+		</header>
+
+		<main class="panel">
+			<div class="scroll">
+				<table id="forecast"></table>
+			</div>
+		</main>
+
+		<section class="facts" aria-label="Good to know">
+			<div class="fact"><img src="icons/day/noon.svg" alt=""><span>1 day = <b>30 min</b> real time &middot; 1 hour = <b>75 s</b></span></div>
+			<div class="fact"><img src="icons/day/sunrise.svg" alt=""><span>Daylight <b>21 min</b> &middot; Night <b>9 min</b></span></div>
+			<div class="fact"><img src="icons/weather/rain.svg" alt=""><span>Weather can change every <b>~11 min</b> &middot; Wind every <b>~2 min</b></span></div>
+			<div class="fact"><img src="icons/weather/starry-night.svg" alt=""><span><b>Day N</b> is shown at each dawn</span></div>
+		</section>
+
+		<footer class="credits">
+			<span>Weather prediction by <strong>Jere Kuusela</strong> &mdash;
+				<a href="https://jerekuusela.github.io/valheim-weather/" target="_blank" rel="noopener">original site</a>
+				&middot; <a href="https://github.com/JereKuusela/valheim-weather" target="_blank" rel="noopener">original repo</a></span>
+			<span class="sep">&#5809;</span>
+			<span>Restyled by <strong>patrix87</strong> &mdash;
+				<a href="https://github.com/patrix87/valheim-weather/" target="_blank" rel="noopener">github.com/patrix87/valheim-weather</a></span>
+			<span class="sep">&#5809;</span>
+			<span class="icon-credits">Icons: <a href="https://github.com/basmilius/weather-icons" target="_blank" rel="noopener">Meteocons</a> (MIT) &middot; <a href="https://game-icons.net" target="_blank" rel="noopener">game-icons.net</a> by Lorc &amp; Delapouite (CC BY 3.0)</span>
+		</footer>
+	</div>
+</body>
+</html>
