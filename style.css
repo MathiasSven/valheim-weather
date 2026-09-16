@@ -177,7 +177,7 @@ button.toggle[aria-pressed="true"] .switch::after { transform: translateX(12px);
 
 .daycycle {
     position: relative;
-    width: 320px;
+    width: 420px;
     max-width: 100%;
     padding: 0 14px;
 }
@@ -187,10 +187,13 @@ button.toggle[aria-pressed="true"] .switch::after { transform: translateX(12px);
     margin-top: 32px;
     border-radius: 3px;
     border: 1px solid rgba(0, 0, 0, 0.6);
+    /* Night until 03:36 (15%), sunrise until 06:00 (25%), daylight until 18:00 (75%), sunset until 20:24 (85%). */
     background: linear-gradient(90deg,
-        var(--night) 0%, var(--night) 12%,
-        #c9733a 15%, #eebd62 27%, #f5dc92 50%, #eebd62 73%,
-        #c9633a 85%, var(--night) 88%, var(--night) 100%);
+        var(--night) 0%, var(--night) 15%,
+        #5a3e4a 17%, #b8643a 20%, #eebd62 25%,
+        #f5dc92 50%,
+        #eebd62 75%, #b8583a 80%, #5a3a48 83%,
+        var(--night) 85%, var(--night) 100%);
 }
 
 .cycle-marks {
@@ -208,7 +211,7 @@ button.toggle[aria-pressed="true"] .switch::after { transform: translateX(12px);
     align-items: center;
 }
 
-.mark .ico { width: 30px; height: 30px; margin-bottom: 10px; }
+.mark .ico { width: 28px; height: 28px; margin-bottom: 12px; }
 
 .mark span {
     font-size: 11px;

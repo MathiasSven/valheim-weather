@@ -1,6 +1,6 @@
 # Icon credits
 
-- `weather/`, `day/`, `wind/wind-beaufort-*.svg`: [Meteocons](https://github.com/basmilius/weather-icons) by Bas Milius, MIT License (see `LICENSE-meteocons`). The Beaufort number color was lightened (`#374151` to `#e9dcc3`) for the dark background.
+- `weather/`, `day/`, `wind/wind-beaufort-*.svg`: [Meteocons](https://github.com/basmilius/weather-icons) by Bas Milius, MIT License (see `LICENSE-meteocons`). The dark gray (`#374151`) in the Beaufort numbers and the sunrise/sunset/moonrise/moonset horizon arrows was lightened to `#e9dcc3` for the dark background.
 - `biomes/`, `wind/arrow.svg`: [game-icons.net](https://game-icons.net), CC BY 3.0 (see `LICENSE-game-icons.txt`). Recolored.
   - meadows: high-grass (Delapouite), blackforest: pine-tree (Lorc), swamp: swamp (Delapouite), mountain: mountaintop (Lorc), plains: wheat (Lorc), ocean: big-wave (Lorc), mistlands: fog (Delapouite), ashlands: volcano (Lorc), deepnorth: iceberg (Delapouite), arrow: broadhead-arrow (Lorc)
 

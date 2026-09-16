@@ -147,8 +147,10 @@ const getRng = (seed) => {
 // Presentation
 // ---------------------------------------------------------------------------
 
-const MORNING = 0.15; // 03:36
-const NIGHT = 0.85;   // 20:24
+const MORNING = 0.15;   // 03:36, "Day N" popup, the sky begins to lighten
+const DAYLIGHT = 0.25;  // 06:00, full daylight
+const DUSK = 0.75;      // 18:00, the sky begins to darken
+const NIGHT = 0.85;     // 20:24, "You feel cold"
 const SUNRISE = MORNING * DAY_LENGTH; // Seconds from midnight to the "Day N" popup.
 
 const sunriseOf = (day) => day * DAY_LENGTH + SUNRISE;
@@ -246,9 +248,9 @@ const dayPhase = (secs) => {
     if (secs < INTRO_TIME) return { icon: "day/midnight", cls: "intro", name: "Intro" };
     const f = (secs % DAY_LENGTH) / DAY_LENGTH;
     if (f < MORNING || f >= NIGHT) return { icon: "day/midnight", cls: "night", name: "Night" };
-    if (f < 0.35) return { icon: "day/sunrise", cls: "dawn", name: "Morning" };
-    if (f < 0.65) return { icon: "day/noon", cls: "day", name: "Day" };
-    return { icon: "day/sunset", cls: "dusk", name: "Evening" };
+    if (f < DAYLIGHT) return { icon: "day/sunrise", cls: "dawn", name: "Sunrise" };
+    if (f < DUSK) return { icon: "day/noon", cls: "day", name: "Day" };
+    return { icon: "day/sunset", cls: "dusk", name: "Sunset" };
 };
 
 // Hue goes from cold blue (calm) to ember red (gale).
