@@ -5,3 +5,4 @@
   - meadows: high-grass (Delapouite), blackforest: pine-tree (Lorc), swamp: swamp (Delapouite), mountain: mountaintop (Lorc), plains: wheat (Lorc), ocean: big-wave (Lorc), mistlands: fog (Delapouite), ashlands: volcano (Lorc), deepnorth: iceberg (Delapouite), arrow: broadhead-arrow (Lorc)
 
 - `static/`: non-animated copies of the Meteocons icons, made by `node icons/make-static.js` (removes the SVG animation tags). Re-run it after adding or replacing a Meteocons icon.
+- `favicon/`: the Meteocons thunderstorm icon (static copy, cropped), with PNG renders for browsers without SVG favicon support.
