@@ -151,9 +151,9 @@ const MORNING = 0.15;   // 03:36, "Day N" popup, the sky begins to lighten
 const DAYLIGHT = 0.25;  // 06:00, full daylight
 const DUSK = 0.75;      // 18:00, the sky begins to darken
 const NIGHT = 0.85;     // 20:24, "You feel cold"
-const SUNRISE = MORNING * DAY_LENGTH; // Seconds from midnight to the "Day N" popup.
+const DAY_START = MORNING * DAY_LENGTH; // Seconds from midnight to the "Day N" popup (03:36).
 
-const sunriseOf = (day) => day * DAY_LENGTH + SUNRISE;
+const dayStartOf = (day) => day * DAY_LENGTH + DAY_START;
 
 // Display order: Ocean first, then the land biomes in game progression.
 const biomes = [
@@ -236,7 +236,7 @@ const clock = (secs) => {
 
 const timeLabel = (secs) => secs < INTRO_TIME ? "Intro" : clock(secs);
 
-// Real time as m:ss, with a sign when asked (for time relative to sunrise).
+// Real time as m:ss, with a sign when asked (for time relative to the day start).
 const duration = (secs, signed = false) => {
     const total = Math.floor(Math.abs(secs));
     const text = Math.floor(total / 60) + ":" + (total % 60).toString().padStart(2, "0");
@@ -281,8 +281,8 @@ const buildTimeline = (day) => {
 const renderHead = (day, steps) => {
     const times = steps.map(({ time, weatherStart }, col) => {
         const phase = dayPhase(time);
-        const since = time - sunriseOf(day);
-        const title = `${phase.name}, ${duration(since)} real time ${since < 0 ? "before" : "after"} sunrise`;
+        const since = time - dayStartOf(day);
+        const title = `${phase.name}, ${duration(since)} real time ${since < 0 ? "before" : "after"} day start (03:36)`;
         return `<th class="time ${phase.cls}${weatherStart ? " wx-start" : ""}" data-col="${col}" title="${title}">${icon(phase.icon, phase.cls)}<span>${timeLabel(time)}</span><span class="since">${duration(since, true)}</span></th>`;
     }).join("");
 
@@ -299,7 +299,7 @@ const renderHead = (day, steps) => {
 
     return `
         <thead>
-            <tr class="row-time"><th class="label corner">Day <b>${day}</b><span class="since-label">since sunrise</span></th>${times}</tr>
+            <tr class="row-time"><th class="label corner">Day <b>${day}</b><span class="since-label">since day start</span></th>${times}</tr>
             <tr class="row-direction"><th class="label">Wind direction</th>${directions}</tr>
             <tr class="row-strength"><th class="label">Wind strength</th>${strengths}</tr>
         </thead>`;
@@ -358,7 +358,7 @@ const changeDay = (delta) => {
 };
 
 // ---------------------------------------------------------------------------
-// Live tracker: follows the game clock in real time from a known sunrise.
+// Live tracker: follows the game clock in real time from a known day start.
 // ---------------------------------------------------------------------------
 
 const TRACKER_KEY = "valheim-weather-tracker";
@@ -387,10 +387,10 @@ const startTracking = (world) => {
     tick();
 };
 
-// Sleeping wakes you at the next sunrise, which may still be ahead on the same calendar day (after midnight).
+// Sleeping wakes you at the next day start, which may still be ahead on the same calendar day (after midnight).
 const sleptToNextDay = () => {
-    const next = Math.floor((worldNow() - SUNRISE) / DAY_LENGTH) + 1;
-    startTracking(sunriseOf(next));
+    const next = Math.floor((worldNow() - DAY_START) / DAY_LENGTH) + 1;
+    startTracking(dayStartOf(next));
 };
 
 const togglePause = () => {
@@ -494,13 +494,13 @@ const updateTracker = () => {
 
     const now = worldNow();
     const day = Math.floor(now / DAY_LENGTH);
-    const since = now - sunriseOf(day);
+    const since = now - dayStartOf(day);
     const nextWeather = (Math.floor(now / WEATHER_PERIOD) + 1) * WEATHER_PERIOD - now;
     const nextWind = (Math.floor(now / WIND_PERIOD) + 1) * WIND_PERIOD - now;
     const elsewhere = shown.day !== day ? `<button id="goto-now" type="button" class="link">Show day ${day}</button>` : "";
     $("#tracker-status").html(
         `<span class="live-dot"></span><span class="now-clock">Day ${day} &middot; <span class="num clock-num">${clock(now)}</span></span>` +
-        `<span class="chip"><b class="num since-num">${duration(since, true)}</b> since sunrise</span>` +
+        `<span class="chip"><b class="num since-num">${duration(since, true)}</b> since day start</span>` +
         `<span class="chip">Weather roll in <b class="num">${duration(nextWeather)}</b></span>` +
         `<span class="chip">Wind change in <b class="num wind-num">${duration(nextWind)}</b></span>` +
         (tracker.paused ? `<span class="chip paused-chip">Paused</span>` : "") + elsewhere);
@@ -527,7 +527,7 @@ $(document).ready(function () {
     $("#day").on('change', forecast);
     $("#prev").on('click', () => changeDay(-1));
     $("#next").on('click', () => changeDay(1));
-    $("#start").on('click', () => tracker ? stopTracking() : startTracking(sunriseOf(selectedDay())));
+    $("#start").on('click', () => tracker ? stopTracking() : startTracking(dayStartOf(selectedDay())));
     $("#slept").on('click', sleptToNextDay);
     $("#pause").on('click', togglePause);
     $("#tracker").on('click', '#goto-now', () => { trackedDay = null; tick(); });
