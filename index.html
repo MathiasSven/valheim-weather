@@ -40,7 +40,19 @@
 		</header>
 
 		<main class="panel">
+			<div class="tracker" id="tracker">
+				<div class="tracker-status" id="tracker-status"></div>
+				<div class="tracker-buttons">
+					<button id="start" type="button" title="Press when the &ldquo;Day N&rdquo; popup appears for the selected day">&#9654; Start day</button>
+					<button id="slept" type="button" title="Press when you wake up and the next &ldquo;Day N&rdquo; popup appears">Slept &rarr; next day</button>
+					<button id="pause" type="button" title="Pause while the game is paused">Pause</button>
+				</div>
+			</div>
 			<div class="scroll">
+				<div class="now-layer" id="now-layer">
+					<div class="time-rail" title="Click or drag to set the current game time"></div>
+					<div id="now-line" hidden><span class="now-handle" title="Drag to set the current game time"></span></div>
+				</div>
 				<table id="forecast"></table>
 			</div>
 		</main>
@@ -50,6 +62,7 @@
 			<div class="fact"><img src="icons/day/sunrise.svg" alt=""><span>Daylight <b>21 min</b> &middot; Night <b>9 min</b></span></div>
 			<div class="fact"><img src="icons/weather/rain.svg" alt=""><span>Weather can change every <b>~11 min</b> &middot; Wind every <b>~2 min</b></span></div>
 			<div class="fact"><img src="icons/weather/starry-night.svg" alt=""><span><b>Day N</b> is shown at each dawn</span></div>
+			<button id="anim-toggle" class="toggle" type="button" aria-pressed="true" title="Turn icon animations on or off"><span class="switch" aria-hidden="true"></span>Animated icons</button>
 		</section>
 
 		<footer class="credits">

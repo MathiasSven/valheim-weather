@@ -135,6 +135,44 @@ button.nav {
 
 #run:hover { background: linear-gradient(180deg, #ffd889, #cf953a); color: #1a1208; }
 
+button.toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 2px 12px 2px 8px;
+    font-size: 12.5px;
+    color: var(--muted);
+}
+
+.switch {
+    position: relative;
+    width: 28px;
+    height: 16px;
+    border-radius: 8px;
+    background: #120e0a;
+    border: 1px solid var(--line);
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.8);
+    transition: background 0.2s;
+}
+
+.switch::after {
+    content: "";
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--muted);
+    transition: transform 0.2s, background 0.2s;
+}
+
+button.toggle[aria-pressed="true"] { color: var(--text); }
+
+button.toggle[aria-pressed="true"] .switch { background: rgba(214, 166, 71, 0.35); border-color: #7a5520; }
+
+button.toggle[aria-pressed="true"] .switch::after { transform: translateX(12px); background: var(--gold-bright); }
+
 /* Day cycle legend */
 
 .daycycle {
@@ -191,7 +229,166 @@ button.nav {
 
 .panel { min-width: 0; }
 
-.scroll { overflow-x: auto; }
+.scroll { --rail: 12px; position: relative; overflow-x: auto; padding-top: var(--rail); }
+
+/* ---------- Live tracker ---------- */
+
+.tracker {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px 16px;
+    padding: 4px 10px;
+    border-bottom: 1px solid var(--line);
+    background: linear-gradient(180deg, rgba(0, 0, 0, 0.25), transparent);
+}
+
+.tracker-status {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 10px;
+    min-height: 28px;
+    font-size: 13px;
+    color: var(--muted);
+}
+
+.tracker-status b { color: var(--gold-bright); font-weight: 700; }
+
+/* Live numbers get a fixed width so the chips don't jitter as digits change. */
+.num {
+    display: inline-block;
+    min-width: 4.8ch;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.num.since-num { min-width: 5.8ch; }
+
+.num.clock-num { min-width: 4.8ch; text-align: left; }
+
+.num.wind-num { min-width: 3.8ch; }
+
+.now-clock {
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--gold-bright);
+    letter-spacing: 0.04em;
+}
+
+.live-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: #6fd36a;
+    box-shadow: 0 0 8px #6fd36a;
+    animation: pulse 1.6s ease-in-out infinite;
+}
+
+.tracker.paused .live-dot { background: var(--muted); box-shadow: none; animation: none; }
+
+@keyframes pulse { 50% { opacity: 0.35; } }
+
+.chip {
+    padding: 2px 8px;
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    background: rgba(0, 0, 0, 0.25);
+    white-space: nowrap;
+}
+
+.paused-chip { color: var(--ember); border-color: rgba(224, 118, 44, 0.5); }
+
+.tracker-buttons { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.tracker-buttons button { padding: 4px 12px; font-size: 13px; }
+
+#start {
+    color: #1a1208;
+    font-weight: 700;
+    background: linear-gradient(180deg, #f0c56a, #b9832f);
+    border-color: #7a5520;
+}
+
+#start:hover { background: linear-gradient(180deg, #ffd889, #cf953a); }
+
+button:disabled { opacity: 0.4; cursor: default; border-color: var(--line); color: var(--text); }
+
+button.link {
+    padding: 2px 8px;
+    font-size: 12px;
+    color: var(--gold-bright);
+    background: transparent;
+    border-color: rgba(214, 166, 71, 0.5);
+    box-shadow: none;
+}
+
+#start.stop {
+    color: var(--text);
+    background: linear-gradient(180deg, #5a2a1c, #3a1a10);
+    border-color: rgba(224, 118, 44, 0.6);
+}
+
+#start.stop:hover { color: #fff1c9; background: linear-gradient(180deg, #74361f, #4a2012); }
+
+/* Current moment across the table. The layer is clipped to the table so the line never adds a scrollbar. */
+.now-layer {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 1;
+    overflow: hidden;
+    pointer-events: none;
+}
+
+/* Strip above the table: click or drag in it to set the time. */
+.time-rail {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: var(--rail);
+    cursor: ew-resize;
+    pointer-events: auto;
+    touch-action: none;
+}
+
+.scroll.tracking .time-rail { background: linear-gradient(180deg, transparent, rgba(111, 211, 106, 0.08)); }
+
+.scroll:not(.tracking) .time-rail { display: none; }
+
+#now-line {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 0;
+    border-left: 2px solid #6fd36a;
+    box-shadow: 0 0 8px rgba(111, 211, 106, 0.8);
+    transition: left 0.25s linear;
+}
+
+#now-line.dragging { transition: none; }
+
+.now-handle {
+    position: absolute;
+    top: 0;
+    left: -7px;
+    width: 12px;
+    height: var(--rail);
+    background: linear-gradient(180deg, #b8f5b4, #56b951);
+    clip-path: polygon(0 0, 100% 0, 100% 55%, 50% 100%, 0 55%);
+    cursor: ew-resize;
+    pointer-events: auto;
+    touch-action: none;
+}
+
+.now-handle:hover, #now-line.dragging .now-handle { background: #d6ffd3; }
+
+#forecast th.time.now { box-shadow: inset 0 -3px 0 #6fd36a; }
+
+#forecast td.past, #forecast th.time.past { filter: brightness(0.55) saturate(0.6); }
 
 table {
     width: 100%;
@@ -213,7 +410,7 @@ th, td {
 th.label {
     position: sticky;
     left: 0;
-    z-index: 1;
+    z-index: 2;
     padding: 0 12px;
     text-align: left;
     color: var(--muted);
@@ -226,7 +423,7 @@ th.label {
 
 /* Time row */
 
-.row-time th { height: 50px; border-bottom: 1px solid var(--line-soft); }
+.row-time th { height: 60px; border-bottom: 1px solid var(--line-soft); }
 
 th.corner {
     color: var(--gold);
@@ -248,6 +445,16 @@ th.time {
 }
 
 th.time .ico { display: block; width: 28px; height: 28px; margin: 0 auto -2px; }
+
+th.time span { display: block; line-height: 1.15; }
+
+th.time .since, .since-label {
+    font-size: 10.5px;
+    color: #9fd89b;
+    opacity: 0.85;
+}
+
+.since-label { display: block; margin-top: 1px; text-transform: none; letter-spacing: 0; }
 
 th.time.night { background: rgba(38, 50, 79, 0.45); color: #b9c3d8; }
 th.time.dawn { background: rgba(201, 115, 58, 0.16); }
@@ -338,7 +545,7 @@ tbody.biome th.biome-label > * { vertical-align: middle; }
 
 tbody.biome th.biome-label span { color: color-mix(in srgb, var(--biome) 55%, var(--text)); }
 
-.row-weather td { height: 38px; }
+.row-weather td { height: 35px; }
 
 td.weather {
     position: relative;
@@ -386,7 +593,7 @@ td.weather.narrow .wx-time, td.weather.short .wx-time { display: none; }
 }
 
 .row-wind td {
-    height: 26px;
+    height: 23px;
     padding: 2px 5px 3px;
     border-bottom: 1px solid var(--line);
     background: color-mix(in srgb, var(--biome) 10%, transparent);
@@ -464,19 +671,20 @@ tbody.biome:hover td { filter: brightness(1.15); }
 
 /* Short screens (laptops): tighten rows so the whole day fits without scrolling. */
 @media (max-height: 900px) {
-    .page { padding-top: 8px; gap: 8px; }
+    .page { padding-top: 6px; padding-bottom: 4px; gap: 6px; }
+    .subtitle { display: none; }
     .topbar { padding-bottom: 8px; }
     h1 { font-size: 26px; }
-    .row-time th { height: 42px; }
+    .row-time th { height: 47px; }
     th.time .ico { width: 24px; height: 24px; }
-    .row-direction td, .row-direction th { height: 50px; }
+    .row-direction td, .row-direction th { height: 46px; }
     .compass { width: 32px; height: 32px; }
     .compass .arrow { inset: 3px; width: 24px; height: 24px; }
-    .row-strength td, .row-strength th { height: 40px; }
+    .row-strength td, .row-strength th { height: 36px; }
     td.strength .gust { width: 48px; height: 48px; margin: -13px auto -15px; }
-    .row-weather td { height: 29px; }
+    .row-weather td { height: 27px; }
     .wx .ico { width: 34px; height: 34px; }
-    .row-wind td { height: 22px; padding-top: 1px; padding-bottom: 2px; }
+    .row-wind td { height: 21px; padding-top: 1px; padding-bottom: 2px; }
     .fact { font-size: 12px; }
     .fact img { width: 26px; height: 26px; }
     .credits { padding-top: 4px; }

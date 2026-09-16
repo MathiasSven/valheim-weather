@@ -149,6 +149,9 @@ const getRng = (seed) => {
 
 const MORNING = 0.15; // 03:36
 const NIGHT = 0.85;   // 20:24
+const SUNRISE = MORNING * DAY_LENGTH; // Seconds from midnight to the "Day N" popup.
+
+const sunriseOf = (day) => day * DAY_LENGTH + SUNRISE;
 
 // Display order: Ocean first, then the land biomes in game progression.
 const biomes = [
@@ -184,7 +187,41 @@ const weatherInfo = {
 const COMPASS = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
 const compass = (deg) => COMPASS[Math.round((deg + 360) / 45) % 8];
 
-const icon = (path, cls = "") => `<img class="ico ${cls}" src="icons/${path}.svg" alt="">`;
+// Weather, day cycle and Beaufort icons are animated; icons/static/ holds frozen copies (see icons/make-static.js).
+const ANIMATION_KEY = "valheim-weather-animated-icons";
+const ANIMATED_ICON = /^icons\/(?:static\/)?((?:weather|day|wind\/wind-beaufort)[\w\/-]*\.svg)$/;
+
+const loadAnimatedIcons = () => {
+    try {
+        const saved = localStorage.getItem(ANIMATION_KEY);
+        if (saved !== null) return saved === "1";
+    } catch (e) { /* Storage unavailable: fall back to the system setting. */ }
+    return !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+};
+
+let animatedIcons = loadAnimatedIcons();
+
+const iconSrc = (file) => {
+    const match = ("icons/" + file).match(ANIMATED_ICON);
+    return match ? (animatedIcons ? "icons/" : "icons/static/") + match[1] : "icons/" + file;
+};
+
+const icon = (path, cls = "") => `<img class="ico ${cls}" src="${iconSrc(path + ".svg")}" alt="">`;
+
+// Switches every icon already on the page, including the ones written in index.html.
+const applyIconAnimation = () => {
+    $("img").each(function () {
+        const match = this.getAttribute("src").match(ANIMATED_ICON);
+        if (match) this.setAttribute("src", iconSrc(match[1]));
+    });
+    $("#anim-toggle").attr("aria-pressed", String(animatedIcons));
+};
+
+const toggleIconAnimation = () => {
+    animatedIcons = !animatedIcons;
+    try { localStorage.setItem(ANIMATION_KEY, animatedIcons ? "1" : "0"); } catch (e) { /* Not remembered. */ }
+    applyIconAnimation();
+};
 
 const percent = (value) => (100 * value).toFixed(0) + "%";
 
@@ -196,6 +233,14 @@ const clock = (secs) => {
 };
 
 const timeLabel = (secs) => secs < INTRO_TIME ? "Intro" : clock(secs);
+
+// Real time as m:ss, with a sign when asked (for time relative to sunrise).
+const duration = (secs, signed = false) => {
+    const total = Math.floor(Math.abs(secs));
+    const text = Math.floor(total / 60) + ":" + (total % 60).toString().padStart(2, "0");
+    if (!signed) return text;
+    return (secs < 0 ? "&minus;" : "+") + text;
+};
 
 const dayPhase = (secs) => {
     if (secs < INTRO_TIME) return { icon: "day/midnight", cls: "intro", name: "Intro" };
@@ -232,25 +277,27 @@ const buildTimeline = (day) => {
 };
 
 const renderHead = (day, steps) => {
-    const times = steps.map(({ time, weatherStart }) => {
+    const times = steps.map(({ time, weatherStart }, col) => {
         const phase = dayPhase(time);
-        return `<th class="time ${phase.cls}${weatherStart ? " wx-start" : ""}" title="${phase.name}">${icon(phase.icon, phase.cls)}<span>${timeLabel(time)}</span></th>`;
+        const since = time - sunriseOf(day);
+        const title = `${phase.name}, ${duration(since)} real time ${since < 0 ? "before" : "after"} sunrise`;
+        return `<th class="time ${phase.cls}${weatherStart ? " wx-start" : ""}" data-col="${col}" title="${title}">${icon(phase.icon, phase.cls)}<span>${timeLabel(time)}</span><span class="since">${duration(since, true)}</span></th>`;
     }).join("");
 
-    const directions = steps.map(({ wind, weatherStart }) => {
+    const directions = steps.map(({ wind, weatherStart }, col) => {
         const to = compass(wind.angle);
         const from = compass(wind.from);
         const title = `From ${from} (${wind.from.toFixed(0)}°) to ${to} (${wind.angle.toFixed(0)}°)`;
-        return `<td class="direction${weatherStart ? " wx-start" : ""}" title="${title}">${windArrow(wind.angle)}<span class="dir-text">${from}&rarr;${to}</span></td>`;
+        return `<td class="direction${weatherStart ? " wx-start" : ""}" data-col="${col}" title="${title}">${windArrow(wind.angle)}<span class="dir-text">${from}&rarr;${to}</span></td>`;
     }).join("");
 
-    const strengths = steps.map(({ wind, weatherStart }) => {
-        return `<td class="strength${weatherStart ? " wx-start" : ""}" style="--h:${windHue(wind.intensity)};--v:${wind.intensity.toFixed(3)}" title="Global wind ${percent(wind.intensity)}">${gustIcon(wind.intensity)}<span>${percent(wind.intensity)}</span></td>`;
+    const strengths = steps.map(({ wind, weatherStart }, col) => {
+        return `<td class="strength${weatherStart ? " wx-start" : ""}" data-col="${col}" style="--h:${windHue(wind.intensity)};--v:${wind.intensity.toFixed(3)}" title="Global wind ${percent(wind.intensity)}">${gustIcon(wind.intensity)}<span>${percent(wind.intensity)}</span></td>`;
     }).join("");
 
     return `
         <thead>
-            <tr class="row-time"><th class="label corner">Day <b>${day}</b></th>${times}</tr>
+            <tr class="row-time"><th class="label corner">Day <b>${day}</b><span class="since-label">since sunrise</span></th>${times}</tr>
             <tr class="row-direction"><th class="label">Wind direction</th>${directions}</tr>
             <tr class="row-strength"><th class="label">Wind strength</th>${strengths}</tr>
         </thead>`;
@@ -259,10 +306,10 @@ const renderHead = (day, steps) => {
 const renderBiome = (biome, steps) => {
     // Consecutive steps in the same weather period merge into one cell.
     const groups = [];
-    steps.forEach((step) => {
+    steps.forEach((step, col) => {
         const last = groups[groups.length - 1];
         if (last && last.weatherPeriod === step.weatherPeriod) last.span++;
-        else groups.push({ ...step, span: 1 });
+        else groups.push({ ...step, col, span: 1 });
     });
 
     const weatherCells = groups.map((group, i) => {
@@ -272,14 +319,14 @@ const renderBiome = (biome, steps) => {
         const until = next ? timeLabel(next.time) : "24:00";
         const title = `${info.label} (${name}), ${timeLabel(group.time)} – ${until}`;
         const size = group.span === 1 ? " narrow" : group.span === 2 ? " short" : "";
-        return `<td class="weather${group.weatherStart ? " wx-start" : ""}${size}" colspan="${group.span}" title="${title}"><span class="wx-time">${timeLabel(group.time)}</span><div class="wx">${icon(info.icon)}<span class="wx-name">${info.label}</span></div></td>`;
+        return `<td class="weather${group.weatherStart ? " wx-start" : ""}${size}" colspan="${group.span}" data-col="${group.col}" data-end="${group.col + group.span - 1}" title="${title}"><span class="wx-time">${timeLabel(group.time)}</span><div class="wx">${icon(info.icon)}<span class="wx-name">${info.label}</span></div></td>`;
     }).join("");
 
-    const windCells = steps.map(({ weatherPeriod, weatherStart, roll, wind }) => {
+    const windCells = steps.map(({ weatherPeriod, weatherStart, roll, wind }, col) => {
         const name = getWeather(getBiome(biome.id, weatherPeriod), roll);
         const { windMin, windMax } = weathers[name];
         const intensity = windMin + (windMax - windMin) * wind.intensity;
-        return `<td class="wind${weatherStart ? " wx-start" : ""}" style="--h:${windHue(intensity)};--v:${intensity.toFixed(3)}" title="${biome.name} wind ${percent(intensity)}"><span class="pct">${percent(intensity)}</span><span class="bar"><i style="width:${percent(intensity)}"></i></span></td>`;
+        return `<td class="wind${weatherStart ? " wx-start" : ""}" data-col="${col}" style="--h:${windHue(intensity)};--v:${intensity.toFixed(3)}" title="${biome.name} wind ${percent(intensity)}"><span class="pct">${percent(intensity)}</span><span class="bar"><i style="width:${percent(intensity)}"></i></span></td>`;
     }).join("");
 
     return `
@@ -289,17 +336,188 @@ const renderBiome = (biome, steps) => {
         </tbody>`;
 };
 
+let shown = { day: 0, steps: [], column: -1 };
+
+const selectedDay = () => Math.max(1, Math.floor(Number($("#day").val())) || 1);
+
 const forecast = () => {
-    const day = Math.max(1, Math.floor(Number($("#day").val())) || 1);
+    const day = selectedDay();
     $("#day").val(day);
     const steps = buildTimeline(day);
     const cols = `<colgroup><col class="col-label">${"<col>".repeat(steps.length)}</colgroup>`;
     $("#forecast").html(cols + renderHead(day, steps) + biomes.map((biome) => renderBiome(biome, steps)).join(""));
+    shown = { day, steps, column: -1 };
+    updateTracker();
 };
 
 const changeDay = (delta) => {
-    $("#day").val(Math.max(1, (Number($("#day").val()) || 1) + delta));
+    $("#day").val(selectedDay() + delta);
     forecast();
+};
+
+// ---------------------------------------------------------------------------
+// Live tracker: follows the game clock in real time from a known sunrise.
+// ---------------------------------------------------------------------------
+
+const TRACKER_KEY = "valheim-weather-tracker";
+
+// { anchorReal: ms timestamp, anchorWorld: game seconds at that moment, paused, pausedWorld }
+let tracker = null;
+let trackedDay = null;
+
+const loadTracker = () => {
+    try { return JSON.parse(localStorage.getItem(TRACKER_KEY)); } catch (e) { return null; }
+};
+
+const saveTracker = () => {
+    try {
+        if (tracker) localStorage.setItem(TRACKER_KEY, JSON.stringify(tracker));
+        else localStorage.removeItem(TRACKER_KEY);
+    } catch (e) { /* Storage unavailable: tracking still works until reload. */ }
+};
+
+const worldNow = () => tracker.paused ? tracker.pausedWorld : tracker.anchorWorld + (Date.now() - tracker.anchorReal) / 1000;
+
+const startTracking = (world) => {
+    tracker = { anchorReal: Date.now(), anchorWorld: world, paused: false };
+    trackedDay = null;
+    saveTracker();
+    tick();
+};
+
+// Sleeping wakes you at the next sunrise, which may still be ahead on the same calendar day (after midnight).
+const sleptToNextDay = () => {
+    const next = Math.floor((worldNow() - SUNRISE) / DAY_LENGTH) + 1;
+    startTracking(sunriseOf(next));
+};
+
+const togglePause = () => {
+    if (tracker.paused) tracker = { anchorReal: Date.now(), anchorWorld: tracker.pausedWorld, paused: false };
+    else tracker = { ...tracker, paused: true, pausedWorld: worldNow() };
+    saveTracker();
+    tick();
+};
+
+const stopTracking = () => {
+    tracker = null;
+    trackedDay = null;
+    saveTracker();
+    updateTracker();
+};
+
+// Moves the tracker to a given game time, keeping it paused or running as it was.
+const setWorldTime = (world) => {
+    if (tracker.paused) tracker = { ...tracker, pausedWorld: world };
+    else tracker = { anchorReal: Date.now(), anchorWorld: world, paused: false };
+    saveTracker();
+    updateTracker();
+};
+
+// Game time under a horizontal position in the table (pixels from the table's left edge).
+const timeAtX = (x) => {
+    const ths = $("#forecast th.time").get();
+    const { day, steps } = shown;
+    if (x <= ths[0].offsetLeft) return steps[0].time;
+    for (let i = 0; i < ths.length; i++) {
+        const th = ths[i];
+        if (x < th.offsetLeft + th.offsetWidth) {
+            const start = steps[i].time;
+            const end = i + 1 < steps.length ? steps[i + 1].time : (day + 1) * DAY_LENGTH;
+            return start + (end - start) * (x - th.offsetLeft) / th.offsetWidth;
+        }
+    }
+    // Stay within the shown day so the table doesn't jump to the next one.
+    return (day + 1) * DAY_LENGTH - 1;
+};
+
+// The handle and the strip above the table both set the time: press to jump, drag to scrub.
+const bindNowHandle = () => {
+    const scroll = document.querySelector(".scroll");
+    const setFromPointer = (e) => setWorldTime(timeAtX(e.clientX - scroll.getBoundingClientRect().left + scroll.scrollLeft));
+    document.querySelectorAll(".now-handle, .time-rail").forEach((el) => {
+        el.addEventListener("pointerdown", (e) => {
+            if (!tracker) return;
+            e.preventDefault();
+            el.setPointerCapture(e.pointerId);
+            $("#now-line").addClass("dragging");
+            setFromPointer(e);
+        });
+        el.addEventListener("pointermove", (e) => {
+            if (tracker && el.hasPointerCapture(e.pointerId)) setFromPointer(e);
+        });
+        el.addEventListener("lostpointercapture", () => $("#now-line").removeClass("dragging"));
+    });
+};
+
+const tick = () => {
+    if (!tracker) return;
+    const day = Math.floor(worldNow() / DAY_LENGTH);
+    // Follow the game into the next day, but let the user browse other days in between.
+    if (day !== trackedDay) {
+        trackedDay = day;
+        $("#day").val(day);
+        forecast();
+    } else {
+        updateTracker();
+    }
+};
+
+const setColumnState = (current) => {
+    if (shown.column === current) return;
+    shown.column = current;
+    $("#forecast [data-col]").each(function () {
+        const col = Number(this.dataset.col);
+        const end = this.dataset.end === undefined ? col : Number(this.dataset.end);
+        this.classList.toggle("past", current >= 0 && end < current);
+        this.classList.toggle("now", current >= 0 && col <= current && current <= end);
+    });
+};
+
+const updateTracker = () => {
+    const $line = $("#now-line");
+    $("#slept, #pause").prop("disabled", !tracker);
+    $("#pause").text(tracker && tracker.paused ? "Resume" : "Pause");
+    $("#start").toggleClass("stop", !!tracker).html(tracker ? "&#9632; Stop" : "&#9654; Start day")
+        .attr("title", tracker ? "Stop the live tracker" : "Press when the “Day N” popup appears for the selected day");
+    $("#tracker").toggleClass("running", !!tracker).toggleClass("paused", !!(tracker && tracker.paused));
+    $(".scroll").toggleClass("tracking", !!tracker);
+    $("#now-layer").css("width", $("#forecast").outerWidth() + "px");
+
+    if (!tracker) {
+        setColumnState(-1);
+        $line.prop("hidden", true);
+        $("#tracker-status").html(`<b>Live tracker</b> &mdash; choose the day, then press <b>Start day</b> when the &ldquo;Day N&rdquo; popup appears in game.`);
+        return;
+    }
+
+    const now = worldNow();
+    const day = Math.floor(now / DAY_LENGTH);
+    const since = now - sunriseOf(day);
+    const nextWeather = (Math.floor(now / WEATHER_PERIOD) + 1) * WEATHER_PERIOD - now;
+    const nextWind = (Math.floor(now / WIND_PERIOD) + 1) * WIND_PERIOD - now;
+    const elsewhere = shown.day !== day ? `<button id="goto-now" type="button" class="link">Show day ${day}</button>` : "";
+    $("#tracker-status").html(
+        `<span class="live-dot"></span><span class="now-clock">Day ${day} &middot; <span class="num clock-num">${clock(now)}</span></span>` +
+        `<span class="chip"><b class="num since-num">${duration(since, true)}</b> since sunrise</span>` +
+        `<span class="chip">Weather roll in <b class="num">${duration(nextWeather)}</b></span>` +
+        `<span class="chip">Wind change in <b class="num wind-num">${duration(nextWind)}</b></span>` +
+        (tracker.paused ? `<span class="chip paused-chip">Paused</span>` : "") + elsewhere);
+
+    const steps = shown.steps;
+    let current = -1;
+    if (shown.day === day) {
+        steps.forEach((step, i) => { if (step.time <= now) current = i; });
+    }
+    setColumnState(current);
+
+    const th = $(`#forecast th.time[data-col="${current}"]`).get(0);
+    if (!th) {
+        $line.prop("hidden", true);
+        return;
+    }
+    const start = steps[current].time;
+    const end = current + 1 < steps.length ? steps[current + 1].time : (day + 1) * DAY_LENGTH;
+    $line.prop("hidden", false).css("left", th.offsetLeft + th.offsetWidth * Math.min(1, (now - start) / (end - start)) + "px");
 };
 
 $(document).ready(function () {
@@ -307,5 +525,16 @@ $(document).ready(function () {
     $("#day").on('change', forecast);
     $("#prev").on('click', () => changeDay(-1));
     $("#next").on('click', () => changeDay(1));
+    $("#start").on('click', () => tracker ? stopTracking() : startTracking(sunriseOf(selectedDay())));
+    $("#slept").on('click', sleptToNextDay);
+    $("#pause").on('click', togglePause);
+    $("#tracker").on('click', '#goto-now', () => { trackedDay = null; tick(); });
+    bindNowHandle();
+    $("#anim-toggle").on('click', toggleIconAnimation);
+    applyIconAnimation();
+
+    tracker = loadTracker();
     forecast();
+    tick();
+    setInterval(tick, 250);
 });
