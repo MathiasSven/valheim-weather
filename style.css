@@ -233,7 +233,13 @@ button.toggle[aria-pressed="true"] .switch::after { transform: translateX(12px);
 
 .panel { min-width: 0; }
 
-.scroll { --rail: 12px; position: relative; overflow-x: auto; padding-top: var(--rail); }
+.scroll {
+    --rail: 12px;
+    --time-row: 60px;
+    position: relative;
+    overflow-x: auto;
+    padding-top: var(--rail);
+}
 
 /* ---------- Live tracker ---------- */
 
@@ -427,7 +433,7 @@ th.label {
 
 /* Time row */
 
-.row-time th { height: 60px; border-bottom: 1px solid var(--line-soft); }
+.row-time th { height: var(--time-row); border-bottom: 1px solid var(--line-soft); }
 
 th.corner {
     color: var(--gold);
@@ -676,10 +682,10 @@ tbody.biome:hover td { filter: brightness(1.15); }
 /* Short screens (laptops): tighten rows so the whole day fits without scrolling. */
 @media (max-height: 900px) {
     .page { padding-top: 6px; padding-bottom: 4px; gap: 6px; }
+    .scroll { --time-row: 54px; }
     .subtitle { display: none; }
     .topbar { padding-bottom: 8px; }
     h1 { font-size: 26px; }
-    .row-time th { height: 47px; }
     th.time .ico { width: 24px; height: 24px; }
     .row-direction td, .row-direction th { height: 46px; }
     .compass { width: 32px; height: 32px; }
