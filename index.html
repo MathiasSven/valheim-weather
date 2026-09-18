@@ -36,7 +36,7 @@
 	<div class="page">
 		<header class="topbar">
 			<div class="brand">
-				<h1>Valheim Weather</h1>
+				<h1>QT Server Weather</h1>
 				<div class="subtitle">Forecast of weather and wind for every biome</div>
 			</div>
 
@@ -45,7 +45,6 @@
 				<label for="day">Day</label>
 				<input id="day" type="number" min="1" value="1"/>
 				<button id="next" class="nav" type="button" aria-label="Next day">&#8250;</button>
-				<button id="run" type="button">Forecast</button>
 			</div>
 
 			<div class="daycycle" aria-label="Day cycle">
@@ -65,16 +64,10 @@
 		<main class="panel">
 			<div class="tracker" id="tracker">
 				<div class="tracker-status" id="tracker-status"></div>
-				<div class="tracker-buttons">
-					<button id="start" type="button" title="Press when the &ldquo;Day N&rdquo; popup appears for the selected day">&#9654; Start day</button>
-					<button id="slept" type="button" title="Press when you wake up and the next &ldquo;Day N&rdquo; popup appears">Slept &rarr; next day</button>
-					<button id="pause" type="button" title="Pause while the game is paused">Pause</button>
-				</div>
 			</div>
 			<div class="scroll">
 				<div class="now-layer" id="now-layer">
-					<div class="time-rail" title="Click or drag to set the current game time"></div>
-					<div id="now-line" hidden><span class="now-handle" title="Drag to set the current game time"></span></div>
+					<div id="now-line" hidden></div>
 				</div>
 				<table id="forecast"></table>
 			</div>

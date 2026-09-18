@@ -111,10 +111,7 @@ input:focus, button:focus-visible {
     box-shadow: 0 0 0 2px rgba(214, 166, 71, 0.25);
 }
 
-button {
-    padding: 6px 14px;
-    cursor: pointer;
-}
+button { padding: 6px 14px; cursor: pointer; }
 
 button:hover { border-color: var(--gold); color: var(--gold-bright); }
 
@@ -124,16 +121,6 @@ button.nav {
     font-size: 20px;
     line-height: 1;
 }
-
-#run {
-    color: #1a1208;
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    background: linear-gradient(180deg, #f0c56a, #b9832f);
-    border-color: #7a5520;
-}
-
-#run:hover { background: linear-gradient(180deg, #ffd889, #cf953a); color: #1a1208; }
 
 button.toggle {
     display: flex;
@@ -234,11 +221,9 @@ button.toggle[aria-pressed="true"] .switch::after { transform: translateX(12px);
 .panel { min-width: 0; }
 
 .scroll {
-    --rail: 12px;
     --time-row: 60px;
     position: relative;
     overflow-x: auto;
-    padding-top: var(--rail);
 }
 
 /* ---------- Live tracker ---------- */
@@ -296,8 +281,6 @@ button.toggle[aria-pressed="true"] .switch::after { transform: translateX(12px);
     animation: pulse 1.6s ease-in-out infinite;
 }
 
-.tracker.paused .live-dot { background: var(--muted); box-shadow: none; animation: none; }
-
 @keyframes pulse { 50% { opacity: 0.35; } }
 
 .chip {
@@ -307,40 +290,6 @@ button.toggle[aria-pressed="true"] .switch::after { transform: translateX(12px);
     background: rgba(0, 0, 0, 0.25);
     white-space: nowrap;
 }
-
-.paused-chip { color: var(--ember); border-color: rgba(224, 118, 44, 0.5); }
-
-.tracker-buttons { display: flex; flex-wrap: wrap; gap: 6px; }
-
-.tracker-buttons button { padding: 4px 12px; font-size: 13px; }
-
-#start {
-    color: #1a1208;
-    font-weight: 700;
-    background: linear-gradient(180deg, #f0c56a, #b9832f);
-    border-color: #7a5520;
-}
-
-#start:hover { background: linear-gradient(180deg, #ffd889, #cf953a); }
-
-button:disabled { opacity: 0.4; cursor: default; border-color: var(--line); color: var(--text); }
-
-button.link {
-    padding: 2px 8px;
-    font-size: 12px;
-    color: var(--gold-bright);
-    background: transparent;
-    border-color: rgba(214, 166, 71, 0.5);
-    box-shadow: none;
-}
-
-#start.stop {
-    color: var(--text);
-    background: linear-gradient(180deg, #5a2a1c, #3a1a10);
-    border-color: rgba(224, 118, 44, 0.6);
-}
-
-#start.stop:hover { color: #fff1c9; background: linear-gradient(180deg, #74361f, #4a2012); }
 
 /* Current moment across the table. The layer is clipped to the table so the line never adds a scrollbar. */
 .now-layer {
@@ -353,22 +302,6 @@ button.link {
     pointer-events: none;
 }
 
-/* Strip above the table: click or drag in it to set the time. */
-.time-rail {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: var(--rail);
-    cursor: ew-resize;
-    pointer-events: auto;
-    touch-action: none;
-}
-
-.scroll.tracking .time-rail { background: linear-gradient(180deg, transparent, rgba(111, 211, 106, 0.08)); }
-
-.scroll:not(.tracking) .time-rail { display: none; }
-
 #now-line {
     position: absolute;
     top: 0;
@@ -380,21 +313,6 @@ button.link {
 }
 
 #now-line.dragging { transition: none; }
-
-.now-handle {
-    position: absolute;
-    top: 0;
-    left: -7px;
-    width: 12px;
-    height: var(--rail);
-    background: linear-gradient(180deg, #b8f5b4, #56b951);
-    clip-path: polygon(0 0, 100% 0, 100% 55%, 50% 100%, 0 55%);
-    cursor: ew-resize;
-    pointer-events: auto;
-    touch-action: none;
-}
-
-.now-handle:hover, #now-line.dragging .now-handle { background: #d6ffd3; }
 
 #forecast th.time.now { box-shadow: inset 0 -3px 0 #6fd36a; }
 

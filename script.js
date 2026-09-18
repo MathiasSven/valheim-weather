@@ -342,9 +342,7 @@ let shown = { day: 0, steps: [], column: -1 };
 
 const selectedDay = () => Math.max(1, Math.floor(Number($("#day").val())) || 1);
 
-const forecast = () => {
-    const day = selectedDay();
-    $("#day").val(day);
+const forecast = (day = 1) => {
     const steps = buildTimeline(day);
     const cols = `<colgroup><col class="col-label">${"<col>".repeat(steps.length)}</colgroup>`;
     $("#forecast").html(cols + renderHead(day, steps) + biomes.map((biome) => renderBiome(biome, steps)).join(""));
@@ -352,113 +350,85 @@ const forecast = () => {
     updateTracker();
 };
 
+const liveDay = () => liveClock ? Math.floor(worldNow() / DAY_LENGTH) : null;
+
+const showDay = (day, followLive = false) => {
+    followLiveDay = followLive;
+    $("#day").val(day);
+    forecast(day);
+};
+
+const selectDay = (day) => {
+    day = Math.max(1, Math.floor(day) || 1);
+    showDay(day, day === liveDay());
+};
+
 const changeDay = (delta) => {
-    $("#day").val(selectedDay() + delta);
-    forecast();
+    selectDay(selectedDay() + delta);
 };
 
 // ---------------------------------------------------------------------------
-// Live tracker: follows the game clock in real time from a known day start.
+// Live tracker: follows the server clock from /datetime.
 // ---------------------------------------------------------------------------
 
-const TRACKER_KEY = "valheim-weather-tracker";
+const DATETIME_URL = "/datetime";
+const MOCK_DATETIME_URL = "server_datetime_status.json";
 
-// { anchorReal: ms timestamp, anchorWorld: game seconds at that moment, paused, pausedWorld }
-let tracker = null;
-let trackedDay = null;
+// { anchorReal: ms timestamp, anchorWorld: game seconds at that moment, source }
+let liveClock = null;
+let liveStatus = "loading";
+let followLiveDay = true;
 
-const loadTracker = () => {
-    try { return JSON.parse(localStorage.getItem(TRACKER_KEY)); } catch (e) { return null; }
+const worldFromServerTime = ({ day, day_fraction }) => day * DAY_LENGTH + day_fraction * DAY_LENGTH;
+
+const validateServerTime = (data) => {
+    if (!data || !Number.isFinite(data.day) || !Number.isFinite(data.day_fraction)) return null;
+    if (data.day < 0 || data.day_fraction < 0 || data.day_fraction >= 1) return null;
+    return {
+        day: Math.floor(data.day),
+        day_fraction: data.day_fraction,
+    };
 };
 
-const saveTracker = () => {
-    try {
-        if (tracker) localStorage.setItem(TRACKER_KEY, JSON.stringify(tracker));
-        else localStorage.removeItem(TRACKER_KEY);
-    } catch (e) { /* Storage unavailable: tracking still works until reload. */ }
+const fetchJson = async (url) => {
+    const response = await fetch(url, { cache: "no-store" });
+    if (!response.ok) throw new Error(`${url} returned ${response.status}`);
+    return response.json();
 };
 
-const worldNow = () => tracker.paused ? tracker.pausedWorld : tracker.anchorWorld + (Date.now() - tracker.anchorReal) / 1000;
-
-const startTracking = (world) => {
-    tracker = { anchorReal: Date.now(), anchorWorld: world, paused: false };
-    trackedDay = null;
-    saveTracker();
-    tick();
-};
-
-// Sleeping wakes you at the next day start, which may still be ahead on the same calendar day (after midnight).
-const sleptToNextDay = () => {
-    const next = Math.floor((worldNow() - DAY_START) / DAY_LENGTH) + 1;
-    startTracking(dayStartOf(next));
-};
-
-const togglePause = () => {
-    if (tracker.paused) tracker = { anchorReal: Date.now(), anchorWorld: tracker.pausedWorld, paused: false };
-    else tracker = { ...tracker, paused: true, pausedWorld: worldNow() };
-    saveTracker();
-    tick();
-};
-
-const stopTracking = () => {
-    tracker = null;
-    trackedDay = null;
-    saveTracker();
-    updateTracker();
-};
-
-// Moves the tracker to a given game time, keeping it paused or running as it was.
-const setWorldTime = (world) => {
-    if (tracker.paused) tracker = { ...tracker, pausedWorld: world };
-    else tracker = { anchorReal: Date.now(), anchorWorld: world, paused: false };
-    saveTracker();
-    updateTracker();
-};
-
-// Game time under a horizontal position in the table (pixels from the table's left edge).
-const timeAtX = (x) => {
-    const ths = $("#forecast th.time").get();
-    const { day, steps } = shown;
-    if (x <= ths[0].offsetLeft) return steps[0].time;
-    for (let i = 0; i < ths.length; i++) {
-        const th = ths[i];
-        if (x < th.offsetLeft + th.offsetWidth) {
-            const start = steps[i].time;
-            const end = i + 1 < steps.length ? steps[i + 1].time : (day + 1) * DAY_LENGTH;
-            return start + (end - start) * (x - th.offsetLeft) / th.offsetWidth;
+const loadServerClock = async () => {
+    let lastError = null;
+    for (const url of [DATETIME_URL, MOCK_DATETIME_URL]) {
+        try {
+            const data = validateServerTime(await fetchJson(url));
+            if (!data) throw new Error(`${url} returned invalid datetime data`);
+            liveClock = {
+                anchorReal: Date.now(),
+                anchorWorld: worldFromServerTime(data),
+                source: url,
+            };
+            liveStatus = "live";
+            showDay(Math.floor(liveClock.anchorWorld / DAY_LENGTH), true);
+            return;
+        } catch (e) {
+            lastError = e;
         }
     }
-    // Stay within the shown day so the table doesn't jump to the next one.
-    return (day + 1) * DAY_LENGTH - 1;
+    console.warn(lastError);
+    liveStatus = "unavailable";
+    updateTracker();
 };
 
-// The handle and the strip above the table both set the time: press to jump, drag to scrub.
-const bindNowHandle = () => {
-    const scroll = document.querySelector(".scroll");
-    const setFromPointer = (e) => setWorldTime(timeAtX(e.clientX - scroll.getBoundingClientRect().left + scroll.scrollLeft));
-    document.querySelectorAll(".now-handle, .time-rail").forEach((el) => {
-        el.addEventListener("pointerdown", (e) => {
-            if (!tracker) return;
-            e.preventDefault();
-            el.setPointerCapture(e.pointerId);
-            $("#now-line").addClass("dragging");
-            setFromPointer(e);
-        });
-        el.addEventListener("pointermove", (e) => {
-            if (tracker && el.hasPointerCapture(e.pointerId)) setFromPointer(e);
-        });
-        el.addEventListener("lostpointercapture", () => $("#now-line").removeClass("dragging"));
-    });
-};
+const worldNow = () => liveClock.anchorWorld + (Date.now() - liveClock.anchorReal) / 1000;
 
 const tick = () => {
-    if (!tracker) return;
+    if (!liveClock) {
+        updateTracker();
+        return;
+    }
     const day = Math.floor(worldNow() / DAY_LENGTH);
-    // Follow the game into the next day, but let the user browse other days in between.
-    if (day !== trackedDay) {
-        trackedDay = day;
-        $("#day").val(day);
-        forecast();
+    if (followLiveDay && shown.day !== day) {
+        showDay(day, true);
     } else {
         updateTracker();
     }
@@ -477,18 +447,16 @@ const setColumnState = (current) => {
 
 const updateTracker = () => {
     const $line = $("#now-line");
-    $("#slept, #pause").prop("disabled", !tracker);
-    $("#pause").text(tracker && tracker.paused ? "Resume" : "Pause");
-    $("#start").toggleClass("stop", !!tracker).html(tracker ? "&#9632; Stop" : "&#9654; Start day")
-        .attr("title", tracker ? "Stop the live tracker" : "Press when the “Day N” popup appears for the selected day");
-    $("#tracker").toggleClass("running", !!tracker).toggleClass("paused", !!(tracker && tracker.paused));
-    $(".scroll").toggleClass("tracking", !!tracker);
+    $("#tracker").toggleClass("running", liveStatus === "live");
+    $(".scroll").toggleClass("tracking", liveStatus === "live");
     $("#now-layer").css("width", $("#forecast").outerWidth() + "px");
 
-    if (!tracker) {
+    if (!liveClock) {
         setColumnState(-1);
         $line.prop("hidden", true);
-        $("#tracker-status").html(`<b>Live tracker</b> &mdash; choose the day, then press <b>Start day</b> when the &ldquo;Day N&rdquo; popup appears in game.`);
+        $("#tracker-status").html(liveStatus === "loading"
+            ? `<b>Live tracker</b> &mdash; loading server time.`
+            : `<b>Live tracker</b> &mdash; server time unavailable.`);
         return;
     }
 
@@ -497,13 +465,11 @@ const updateTracker = () => {
     const since = now - dayStartOf(day);
     const nextWeather = (Math.floor(now / WEATHER_PERIOD) + 1) * WEATHER_PERIOD - now;
     const nextWind = (Math.floor(now / WIND_PERIOD) + 1) * WIND_PERIOD - now;
-    const elsewhere = shown.day !== day ? `<button id="goto-now" type="button" class="link">Show day ${day}</button>` : "";
     $("#tracker-status").html(
         `<span class="live-dot"></span><span class="now-clock">Day ${day} &middot; <span class="num clock-num">${clock(now)}</span></span>` +
         `<span class="chip"><b class="num since-num">${duration(since, true)}</b> since day start</span>` +
         `<span class="chip">Weather roll in <b class="num">${duration(nextWeather)}</b></span>` +
-        `<span class="chip">Wind change in <b class="num wind-num">${duration(nextWind)}</b></span>` +
-        (tracker.paused ? `<span class="chip paused-chip">Paused</span>` : "") + elsewhere);
+        `<span class="chip">Wind change in <b class="num wind-num">${duration(nextWind)}</b></span>`);
 
     const steps = shown.steps;
     let current = -1;
@@ -523,20 +489,13 @@ const updateTracker = () => {
 };
 
 $(document).ready(function () {
-    $("#run").on('click', forecast);
-    $("#day").on('change', forecast);
+    $("#day").on('change', () => selectDay(selectedDay()));
     $("#prev").on('click', () => changeDay(-1));
     $("#next").on('click', () => changeDay(1));
-    $("#start").on('click', () => tracker ? stopTracking() : startTracking(dayStartOf(selectedDay())));
-    $("#slept").on('click', sleptToNextDay);
-    $("#pause").on('click', togglePause);
-    $("#tracker").on('click', '#goto-now', () => { trackedDay = null; tick(); });
-    bindNowHandle();
     $("#anim-toggle").on('click', toggleIconAnimation);
     applyIconAnimation();
 
-    tracker = loadTracker();
     forecast();
-    tick();
+    loadServerClock();
     setInterval(tick, 250);
 });
