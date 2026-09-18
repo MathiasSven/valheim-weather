@@ -179,6 +179,7 @@ button.toggle[aria-pressed="true"] .switch::after { transform: translateX(12px);
     position: relative;
     width: 420px;
     max-width: 100%;
+    min-height: 58px;
     padding: 0 14px;
 }
 
